@@ -11,7 +11,6 @@
 
 # 互联网中的3v + 3高
     - 3v : 海量（朋友圈） 多样（微博中的内容：文字，图片，音频等） 实时
-   
     - 3高： 高并发 高可扩 高性能
 
 # 当下的Nosql的经典应用：
@@ -66,6 +65,41 @@
         - make install
         - cd redis-3.2.4将redis.conf中的 daemonize no 设置为 daemonize yes：将redis作为后台线程运行
         - 测试redis性能：/usr/local/bin 运行redis-benchmark
+
+    - redis 使用命令
+        - select : 切换数据库
+        - dbsize：查看当前数据库中的key的数量
+        - flushdb : 清空当前的库
+        - flushall: 清空全部的库
+        - redis : 默认端口6379
+
+    - redis 数据类型
+        -  string：
+            - string是redis最基本的类型，你可以理解成与Memcached一模一样的类型，一个key对应一个value。
+            - string类型是二进制安全的。意思是redis的string可以包含任何数据。比如jpg图片或者序列化的对象 。
+            - string类型是Redis最基本的数据类型，一个redis中字符串value最多可以是512M
+        - Hash：
+            - 是一个string类型的field和value的映射表，hash特别适合用于存储对象
+            - 类似Java里面的Map<String,Object>
+        - List（列表）
+            - Redis 列表是简单的字符串列表，按照插入顺序排序。你可以添加一个元素导列表的头部（左边）或者尾部（右边）。它的底层实际是个链表
+        - Set（集合）
+            - Redis的Set是string类型的无序集合。它是通过HashTable实现实现的，
+            - zset 和 set 一样也是string类型元素的集合,且不允许重复的成员。
+            - 不同的是每个元素都会关联一个double类型的分数。
+            - redis正是通过分数来为集合中的成员进行从小到大的排序。
+            - zset的成员是唯一的,但分数(score)却可以重复
+
+    - （redis命令参考）http://redisdoc.com/
+        - redis key: 
+            -  判断某个key是否存在：exists key的名字
+            -  将某个移动到另外的库中：move key 2 ： 从当前库移动到2号库中
+            -  给某个key设置过期时间： exprie  key 秒钟：为当前的key设置过期时间
+            -  查看某个key还有多少秒过期。
+            -  type key查看你的key是什么类型
+        - list： 
+            -  lpush|rpush|lrange : rpush  先进先出，其他的后进先出
+
 
 
 
