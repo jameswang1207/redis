@@ -206,42 +206,42 @@
             - 15分钟内改了1次。
         - save : 表示当前自动备份，不管其他，去那不阻塞
     　　　　- bgsave : redis会在后台异步进行快照操作，快照还可以响应客户端请求，可以通过lastsave命令获得最后一次成功执行快照的时间
-    　　　　－　优势：　
-    　　　　    －　适合大规模的数据恢复
-    　　　　　　　　－　对数据完整性和一致性要求不高　
-    　　　　　－　劣势：
-    　　　　　　　　－　在一定时间内做一次备份，如果redis意外宕机，会丢失最后一次快照的所有修改
-    　　　　　　　　－　rdb需要fork子进程来保存数据到硬盘上，当数量级比较大时，fork是非常耗时的，会导致redis在一些毫秒级不能响应客户端请求
+    　　　　-　优势：　
+    　　　　    -　适合大规模的数据恢复
+    　　　　　　　　-　对数据完整性和一致性要求不高　
+    　　　　　-　劣势：
+    　　　　　　　　-　在一定时间内做一次备份，如果redis意外宕机，会丢失最后一次快照的所有修改
+    　　　　　　　　-　rdb需要fork子进程来保存数据到硬盘上，当数量级比较大时，fork是非常耗时的，会导致redis在一些毫秒级不能响应客户端请求
     - AOF : Append Only File: 
-        　　－　以日志形式来记录每个读操作，将ｒｅｄｉｓ执行过的所有写指令记录下，只许追加文件不许改变文件，ｒｅｄｉｓ在启动时会读取该文件的数据来构建数据，redis在启动时根据文件的内容将写操作执行一次完成数据的恢复。
-        　　　－　aof 文件和rdb文件可以一同存在。但先加载的是ａｏｆ文件。
-        　　　－　使用／usr/local/bin 的redis-check-aof来修复aof文件 : redis-check-aof [--fix] <file.aof>
-        　　　－　使用／usr/local/bin 的redis-check-rdb来修复rdb文件 :redis-check-rdb rdb-file-name>
-    　      －　AOF and RDB persistence can be enabled at the same time 
+        　　-　以日志形式来记录每个读操作，将ｒｅｄｉｓ执行过的所有写指令记录下，只许追加文件不许改变文件，ｒｅｄｉｓ在启动时会读取该文件的数据来构建数据，redis在启动时根据文件的内容将写操作执行一次完成数据的恢复。
+        　　　-　aof 文件和rdb文件可以一同存在。但先加载的是ａｏｆ文件。
+        　　　-　使用／usr/local/bin 的redis-check-aof来修复aof文件 : redis-check-aof [--fix] <file.aof>
+        　　　-　使用／usr/local/bin 的redis-check-rdb来修复rdb文件 :redis-check-rdb rdb-file-name>
+    　      -　AOF and RDB persistence can be enabled at the same time 
     without　problems.If the AOF is enabled on startup Redis will load the AOF, that is the file　with the better durability guarantees.
             - Rewrite: AOF采用文件追加方式，文件会越来越大，为了避免这种情况，增加重写方式，当aof文件大小超过设定的大小时，Redis会重启Redis的aof文件压缩。只保留可以恢复文件的最小指令集，使用命令bgrewriteaof
                 - 文件触发的时机：Redis会记录上次重写时的aof文件大小，默认配置是当前aof文件大小是上次rewrite后大小的一倍，且文件大小是６４Ｍ时触发。
-            －　aof的优势：
-                －　每秒同步（appendfsync everysec:默认值）：异步进行，每秒同步一次，当机器宕机，只会丢失最后一秒的数据
-                －　每修改同步（appendfsync always）：每发生一次变更就立即写入磁盘，性能差，数据完整性强　
-                －　不同步（ppendfsync no）
-            －　aof的劣势：
-            　　　　－　相同数据集的aof文件远大于rdb文件，恢复起来速度rdb慢
-            　　　　－　aof运行效率慢rdb，每秒同步效率较好，
-    －　使用策略选择：
-    　　　－　If you care a lot about your data, but still can live with a few minutes of data loss in case of disasters, you can simply use RDB alone.
-    －　性能建议：
-        －　因为RDB文件只用作后备用途，建议只在Slave上持久化RDB文件，而且只要15分钟备份一次就够了，只保留save 900 1这条规则。
-        －　如果Enalbe AOF，好处是在最恶劣情况下也只会丢失不超过两秒数据，启动脚本较简单只load自己的AOF文件就可以了。代价一是带来了持续的IO，二是AOF rewrite的最后将rewrite过程中产生的新数据写到新文件造成的阻塞几乎是不可避免的。只要硬盘许可，应该尽量减少AOF rewrite的频率，AOF重写的基础大小默认值64M太小了，可以设到5G以上。默认超过原大小100%大小时重写可以改到适当的数值。
-        －　如果不Enable AOF ，仅靠Master-Slave Replication 实现高可用性也可以。能省掉一大笔IO也减少了rewrite时带来的系统波动。代价是如果Master/Slave同时倒掉，会丢失十几分钟的数据，启动脚本也要比较两个Master/Slave中的RDB文件，载入较新的那个。新浪微博就选用了这种架构
+            -　aof的优势：
+                -　每秒同步（appendfsync everysec:默认值）：异步进行，每秒同步一次，当机器宕机，只会丢失最后一秒的数据
+                -　每修改同步（appendfsync always）：每发生一次变更就立即写入磁盘，性能差，数据完整性强　
+                -　不同步（ppendfsync no）
+            -　aof的劣势：
+            　　　　-　相同数据集的aof文件远大于rdb文件，恢复起来速度rdb慢
+            　　　　-　aof运行效率慢rdb，每秒同步效率较好，
+    -　使用策略选择：
+    　　　-　If you care a lot about your data, but still can live with a few minutes of data loss in case of disasters, you can simply use RDB alone.
+    -　性能建议：
+        -　因为RDB文件只用作后备用途，建议只在Slave上持久化RDB文件，而且只要15分钟备份一次就够了，只保留save 900 1这条规则。
+        -　如果Enalbe AOF，好处是在最恶劣情况下也只会丢失不超过两秒数据，启动脚本较简单只load自己的AOF文件就可以了。代价一是带来了持续的IO，二是AOF rewrite的最后将rewrite过程中产生的新数据写到新文件造成的阻塞几乎是不可避免的。只要硬盘许可，应该尽量减少AOF rewrite的频率，AOF重写的基础大小默认值64M太小了，可以设到5G以上。默认超过原大小100%大小时重写可以改到适当的数值。
+        - 如果不Enable AOF ，仅靠Master-Slave Replication 实现高可用性也可以。能省掉一大笔IO也减少了rewrite时带来的系统波动。代价是如果Master/Slave同时倒掉，会丢失十几分钟的数据，启动脚本也要比较两个Master/Slave中的RDB文件，载入较新的那个。新浪微博就选用了这种架构
 
 # redis：事务　（部分支持）
-　　　　－　可以一次执行多个命令，本质是一组命令的集合，一个集合中所有的命令都会被序列化，按顺序执行，不会被其他命令插入，不会加塞。
-　　　　－　一个对列中，一次性的，顺序的，排他性的执行一系列命令。
-　　　　－　MULTI　：开启事务
-　　　　－　EXEC　：执行
-　　　　－　DISCARD :放弃执行
-　　　　－　全体连坐　：一个死全体死(保证事务)
+　　　　-　可以一次执行多个命令，本质是一组命令的集合，一个集合中所有的命令都会被序列化，按顺序执行，不会被其他命令插入，不会加塞。
+　　　　-　一个对列中，一次性的，顺序的，排他性的执行一系列命令。
+　　　　-　MULTI　：开启事务
+　　　　-　EXEC　：执行
+　　　　-　DISCARD :放弃执行
+　　　　-　全体连坐　：一个死全体死(保证事务)
         ```shell
             MULTI
             set k1 v1
@@ -249,7 +249,7 @@
             setsffdsf k3 v3 (throw exception)
             EXEC
         ```
-　　　　－　冤头债主　：　(k1出错，其他执行成功)
+　　　　-　冤头债主　：　(k1出错，其他执行成功)
         ```shell
             MULTI
             inr k1
@@ -257,7 +257,7 @@
             set k3 v3
             EXEC (throw exception)
         ```
-　　　　　－ watch 监控()
+　　　　　- watch 监控()
         - 悲观锁｜乐观锁｜cas(check and set)
             - 悲观锁:顾名思义，就是很悲观，每次去拿数据的时候都认为别人会修改，所以每次在拿数据的时候都会上锁，这样别人想拿这个数据就会block直到它拿到锁。传统的关系型数据库里边就用到了很多这种锁机制，比如行锁，表锁等，读锁，写锁等，都是在做操作之前先上锁.(数据备份)
             - 乐观锁:顾名思义，就是很乐观，每次去拿数据的时候都认为别人不会修改，所以不会上锁，但是在更新的时候会判断一下在此期间别人有没有去更新这个数据，可以使用版本号等机制。乐观锁适用于多读的应用类型，这样可以提高吞吐量.（提交的版本必须大于当前的版本）
@@ -270,34 +270,34 @@
             ```
             - 当执行上面的命令时，有人也修改k1则增加和减少是失败的，没有则成功,当有人已改，则先unwatch(对所有的key)再进行watch
 # redis：主从复制,读写分离
-　　　　　　　　－　master(写入) and slave（读取） ：读写分离，容灾备份
-　　　　　　　　－　玩法：
-　　　　　　　　    －　配从（库）不配主（库）　
-　　　　　　　　　　　　－　从库配置：slaveof 主库ip　主库端口
-　　　　　　　　　　　　    －　每次与master断开之后,需要重新链接，除非你配置进redis.conf文件，
-　　　　　　　　　　　　　　　　－　Info replication
-　　　　　　　　　　　　－　修改配置文件细节操作
-　　　　　　　　　　　　－　常用３招
+　　　　　　　　-　master(写入) and slave（读取） ：读写分离，容灾备份
+　　　　　　　　-　玩法：
+　　　　　　　　    -　配从（库）不配主（库）　
+　　　　　　　　　　　　-　从库配置：slaveof 主库ip　主库端口
+　　　　　　　　　　　　    -　每次与master断开之后,需要重新链接，除非你配置进redis.conf文件，
+　　　　　　　　　　　　　　　　-　Info replication
+　　　　　　　　　　　　-　修改配置文件细节操作
+　　　　　　　　　　　　-　常用３招
                - 查看主机信息　info replication
-            　　　－　一主二仆
-                   － 将某个主机转成SLAV　：　SLAVEOF 127.0.0.1 6379(当自己转化为从机，将备份全部的主机数据)
-                　　 －　主机能向添加，从机不能添加，当从机添加时，并抛出异常。
-                　　　－　当主机宕机，从机只能待命
-            　　　－　薪火相传：
-            　　　　　　－　上一个slave可以是下一个slave的master,Slave同样可以接受其他slaves的链接和请求，那么该slave作为下一节点的master，可以有效减轻master的写压力。
-            　　　　　　－　中途变更转向：会清除之前的数据，重新建立拷贝最新的
-            　　　－　　反客为主
-            　　　　　　－　SLAVEOF no one :使当前数据库停止与其他数据　库的同步，转成主数据库
-        －复制原理：
-        　　　　　－　slave启动成功链接到master后发送一个sync命令，master接受到启动命在后台启动存盘进程，存盘完毕，master将传送整个文件到slave中，完成一次完全备份。
-        　　　　　－　全量复制：slave服务在接受到数据库文件后，将其存盘并加载到内存中。
-        　　　　　－　增量复制：master一次将新的所有接受到的修改命令一次传给slave,完成同步。但是一但重新链接，将进行完全同步。
-        －　哨兵模式：　
-        　　　　　－　概念：反客为主的自动版，能够后台监控主机是否故障，如果出现故障根据投票自动将从库转换为主库
-        　　　　　－　使用步骤：
+            　　　-　一主二仆
+                   - 将某个主机转成SLAV　：　SLAVEOF 127.0.0.1 6379(当自己转化为从机，将备份全部的主机数据)
+                　　 -　主机能向添加，从机不能添加，当从机添加时，并抛出异常。
+                　　　-　当主机宕机，从机只能待命
+            　　　-　薪火相传：
+            　　　　　　-　上一个slave可以是下一个slave的master,Slave同样可以接受其他slaves的链接和请求，那么该slave作为下一节点的master，可以有效减轻master的写压力。
+            　　　　　　-　中途变更转向：会清除之前的数据，重新建立拷贝最新的
+            　　　-　　反客为主
+            　　　　　　-　SLAVEOF no one :使当前数据库停止与其他数据　库的同步，转成主数据库
+        - 复制原理：
+        　　　　　-　slave启动成功链接到master后发送一个sync命令，master接受到启动命在后台启动存盘进程，存盘完毕，master将传送整个文件到slave中，完成一次完全备份。
+        　　　　　-　全量复制：slave服务在接受到数据库文件后，将其存盘并加载到内存中。
+        　　　　　-　增量复制：master一次将新的所有接受到的修改命令一次传给slave,完成同步。但是一但重新链接，将进行完全同步。
+        -　哨兵模式：　
+        　　　　　-　概念：反客为主的自动版，能够后台监控主机是否故障，如果出现故障根据投票自动将从库转换为主库
+        　　　　　-　使用步骤：
         　　　　　　　　－　调整结构：6379带着80 81.
-                －　在redis的安装目录中新建文件(/opt/redis-3.2.4/)sentinel.conf,名字不能错，
-                －　配置哨兵，配置内容：(http://www.redis.cn/topics/sentinel.html)
+                -　在redis的安装目录中新建文件(/opt/redis-3.2.4/)sentinel.conf,名字不能错，
+                -　配置哨兵，配置内容：(http://www.redis.cn/topics/sentinel.html)
                     ```shell
                     　　　　sentinel monitor mymaster 127.0.0.1 6379 1
         　　　　　　　　　　　　　　　　sentinel monitor <master-group-name> <ip> <port> <quorum:如果master 宕机，那么谁的票数多出一票，则将其设置为master>
