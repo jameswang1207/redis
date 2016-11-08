@@ -272,42 +272,77 @@
        
 # redis：主从复制,读写分离
 
-   - master(写入) and slave（读取） ：读写分离，容灾备份
-       - 玩法：
-       - 配从（库）不配主（库）
-       - 从库配置：slaveof 主库ip　主库端口
-   - 每次与master断开之后,需要重新链接，除非你配置进redis.conf文件，
-       - Info replication
-           - 修改配置文件细节操作 
-           - 常用３招
-               - 查看主机信息　info replication
-               - 一主二仆
-                  - 将某个主机转成SLAV　：　SLAVEOF 127.0.0.1 6379(当自己转化为从机，将备份全部的主机数据)
-                  - 主机能向添加，从机不能添加，当从机添加时，并抛出异常。
-                  - 当主机宕机，从机只能待命
-               - 薪火相传：
-                  - 上一个slave可以是下一个slave的master,Slave同样可以接受其他slaves的链接和请求，那么该slave作为下一节点的master，可以有效减轻master的写压力.
-                  - 中途变更转向：会清除之前的数据，重新建立拷贝最新的
-            　　- 反客为主
-            　　　 - SLAVEOF no one :使当前数据库停止与其他数据　库的同步，转成主数据库
-     - 复制原理：
-         - slave启动成功链接到master后发送一个sync命令，master接受到启动命在后台启动存盘进程，存盘完毕，master将传送整个文件到slave中，完成一次完全备份。
-         - 全量复制：slave服务在接受到数据库文件后，将其存盘并加载到内存中。
-         - 增量复制：master一次将新的所有接受到的修改命令一次传给slave,完成同步。但是一但重新链接，将进行完全同步。
-     - 哨兵模式：　
-         - 概念：反客为主的自动版，能够后台监控主机是否故障，如果出现故障根据投票自动将从库转换为主库
-         - 使用步骤：
-             - 调整结构：6379带着80 81.
-             - 在redis的安装目录中新建文件(/opt/redis-3.2.4/)sentinel.conf,名字不能错，
-             - 配置哨兵，配置内容：(http://www.redis.cn/topics/sentinel.html)
-                 ```shell
-                     sentinel monitor mymaster 127.0.0.1 6379 1
-        　　　　　　　sentinel monitor <master-group-name> <ip> <port> <quorum:如果master 宕机，那么谁的票数多出一票，则将其设置为master>
-                 ```
-             - 启动哨兵
-                 - redis-sentinel /opt/redis-3.2.4/sentinel.conf
-                 - 所有的写操作都在master上操作，然后同步更新到slave上，所以master同步到slave上有一定的延迟，当系统繁忙时，延迟问题会更加严重，slave机器的增加也会舍得这个问题根加严重。
-        　　　
+# redis：事务(部分支持)
+    - 可以一次执行多个命令，本质是一组命令的集合，一个集合中所有的命令都会被序列化，按顺序执行，不会被其他命令插入，不会加塞。
+    - 一个对列中，一次性的，顺序的，排他性的执行一系列命令。
+    - MULTI　：开启事务
+    - EXEC　：执行
+    - DISCARD :放弃执行
+    - 全体连坐　：一个死全体死(保证事务)
+        ```shell
+            MULTI
+            set k1 v1
+            set k2 v2
+            setsffdsf k3 v3 (throw exception)
+            EXEC
+        ```
+　　- 冤头债主　：　(k1出错，其他执行成功)
+        ```shell
+            MULTI
+            inr k1
+            set k2 v2
+            set k3 v3
+            EXEC (throw exception)
+        ```
+　　- watch 监控()
+        -  悲观锁｜乐观锁｜cas(check and set)
+            - 悲观锁:顾名思义，就是很悲观，每次去拿数据的时候都认为别人会修改，所以每次在拿数据的时候都会上锁，这样别人想拿这个数据就会block直到它拿到锁。传统的关系型数据库里边就用到了很多这种锁机制，比如行锁，表锁等，读锁，写锁等，都是在做操作之前先上锁.(数据备份)
+            - 乐观锁:顾名思义，就是很乐观，每次去拿数据的时候都认为别人不会修改，所以不会上锁，但是在更新的时候会判断一下在此期间别人有没有去更新这个数据，可以使用版本号等机制。乐观锁适用于多读的应用类型，这样可以提高吞吐量.（提交的版本必须大于当前的版本）
+            ```shell
+                watch k1
+                MULTI
+                incr k1 
+                decr k2
+                EXEC
+            ```
+            - 当执行上面的命令时，有人也修改k1则增加和减少是失败的，没有则成功,当有人已改，则先unwatch(对所有的key)再进行watch
+
+# redis：主从复制,读写分离
+    - master(写入) and slave（读取） ：读写分离，容灾备份
+　　- 玩法：
+　　    - 配从（库）不配主（库）　
+        - 从库配置：slaveof 主库ip　主库端口
+        - 每次与master断开之后,需要重新链接，除非你配置进redis.conf文件，
+　　    - Info replication
+　　　　- 修改配置文件细节操作
+　　　　- 常用３招
+            - 查看主机信息　info replication
+            - 一主二仆
+                - 将某个主机转成SLAV　：　SLAVEOF 127.0.0.1 6379(当自己转化为从机，将备份全部的主机数据)
+                - 主机能向添加，从机不能添加，当从机添加时，并抛出异常。
+                - 当主机宕机，从机只能待命
+            - 薪火相传：
+                - 上一个slave可以是下一个slave的master,Slave同样可以接受其他slaves的链接和请求，那么该slave作为下一节点的master，可以有效减轻master的写压力。
+            　　- 中途变更转向：会清除之前的数据，重新建立拷贝最新的
+            - 反客为主
+            　　- SLAVEOF no one :使当前数据库停止与其他数据　库的同步，转成主数据库
+        - 复制原理：
+        　　　　- slave启动成功链接到master后发送一个sync命令，master接受到启动命在后台启动存盘进程，存盘完毕，master将传送整个文件到slave中，完成一次完全备份。
+        　　　　- 全量复制：slave服务在接受到数据库文件后，将其存盘并加载到内存中。
+        　　　　-增量复制：master一次将新的所有接受到的修改命令一次传给slave,完成同步。但是一但重新链接，将进行完全同步。
+        - 哨兵模式：
+            - 概念：反客为主的自动版，能够后台监控主机是否故障，如果出现故障根据投票自动将从库转换为主库
+        　　- 使用步骤：
+        　　　  - 调整结构：6379带着80 81.
+                - 在redis的安装目录中新建文件(/opt/redis-3.2.4/)sentinel.conf,名字不能错，
+                - 配置哨兵，配置内容：(http://www.redis.cn/topics/sentinel.html)
+                    ```shell
+                        sentinel monitor mymaster 127.0.0.1 6379 1
+        　　　　　　　　sentinel monitor <master-group-name> <ip> <port> <quorum:如果master 宕机，那么谁的票数多出一票，则将其设置为master>
+                    ```
+            - 启动哨兵
+                redis-sentinel /opt/redis-3.2.4/sentinel.conf
+               - 所有的写操作都在master上操作，然后同步更新到slave上，所以master同步到slave上有一定的延迟，当系统繁忙时，延迟问题会更加严重，slave机器的增加也会舍得这个问题根加严重。
 
 
 
